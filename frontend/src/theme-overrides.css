@@ -1,0 +1,35 @@
+.brand > span,
+.user > span,
+.collapse,
+.notify,
+.icon,
+.button,
+.search,
+.panel,
+.stat,
+.metric,
+.security,
+.badge,
+.toggle,
+.devicon {
+  border-radius: 4px;
+}
+
+.brand > span {
+  clip-path: polygon(0 0, 82% 0, 100% 18%, 100% 100%, 18% 100%, 0 82%);
+}
+
+.user > span,
+.collapse {
+  border-radius: 5px;
+}
+
+.panel,
+.stat,
+.metric {
+  box-shadow: inset 3px 0 0 rgba(45, 129, 231, 0.16);
+}
+
+.button.primary {
+  box-shadow: inset 3px 0 0 rgba(255, 255, 255, 0.28);
+}

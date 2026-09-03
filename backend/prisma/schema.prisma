@@ -1,0 +1,352 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DeviceType {
+  ROUTER
+  SWITCH
+  FIREWALL
+  OTHER
+}
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  UNKNOWN
+}
+enum InterfaceStatus {
+  UP
+  DOWN
+  UNKNOWN
+  DISABLED
+}
+enum ClientStatus {
+  ACTIVE
+  SUSPENDED
+  DISCONNECTED
+  INACTIVE
+}
+enum EventSource {
+  SNMP
+  SYSLOG
+  SYSTEM
+  NOC
+  WHATSAPP
+}
+enum EventSeverity {
+  INFO
+  WARNING
+  CRITICAL
+  RECOVERY
+}
+enum IncidentStatus {
+  ACTIVE
+  RECOVERED
+  ACKNOWLEDGED
+  SUPPRESSED
+}
+enum IncidentUpdateType {
+  CREATED
+  NOTIFICATION_SENT
+  REMINDER_SENT
+  ACKNOWLEDGED
+  SUPPRESSED
+  RECOVERED
+}
+enum SnmpStatus {
+  SUCCESS
+  FAILED
+  TIMEOUT
+}
+enum NotificationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+}
+enum NotificationChannel {
+  WHATSAPP
+}
+enum NocActionType {
+  UPGRADE
+  DOWNGRADE
+  CLIENT_EDIT
+  PORT_CHANGE
+}
+enum RecordStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id String @id @default(cuid())
+  name String
+  username String @unique
+  email String @unique
+  passwordHash String
+  enabled Boolean @default(true)
+  lastLoginAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  roles UserRole[]
+  nocActions NocAction[]
+  packageChanges PackageChange[]
+  auditLogs AuditLog[]
+}
+model Role {
+  id String @id @default(cuid())
+  name String @unique
+  description String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  users UserRole[]
+  permissions Permission[]
+}
+model Permission {
+  id String @id @default(cuid())
+  name String @unique
+  description String?
+  roles Role[]
+}
+model UserRole {
+  userId String
+  roleId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  @@id([userId, roleId])
+}
+model Device {
+  id String @id @default(cuid())
+  name String
+  ipAddress String @unique
+  vendor String
+  model String?
+  type DeviceType
+  location String?
+  snmpVersion String
+  snmpPort Int @default(161)
+  enabled Boolean @default(true)
+  status DeviceStatus @default(UNKNOWN)
+  lastSeenAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  credential DeviceCredential?
+  interfaces NetworkInterface[]
+  events Event[]
+  incidents Incident[]
+  syslogMessages SyslogMessage[]
+  snmpChecks SnmpCheck[]
+}
+model DeviceCredential {
+  id String @id @default(cuid())
+  deviceId String @unique
+  snmpUsername String?
+  encryptedSecret String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  // Secret values belong in encrypted storage or a secrets manager, never normal responses or logs.
+}
+model NetworkInterface {
+  id String @id @default(cuid())
+  deviceId String
+  name String
+  description String?
+  clientId String?
+  speed String?
+  adminStatus InterfaceStatus @default(UNKNOWN)
+  operationalStatus InterfaceStatus @default(UNKNOWN)
+  lastChangeAt DateTime?
+  enabled Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  events Event[]
+  incidents Incident[]
+  snmpChecks SnmpCheck[]
+  @@unique([deviceId, name])
+}
+model Client {
+  id String @id @default(cuid())
+  clientCode String @unique
+  customerName String
+  username String?
+  serviceType String?
+  packageName String?
+  phoneNumber String?
+  status ClientStatus @default(ACTIVE)
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  interfaces NetworkInterface[]
+  events Event[]
+  incidents Incident[]
+  nocActions NocAction[]
+  packageChanges PackageChange[]
+}
+model Event {
+  id String @id @default(cuid())
+  type String
+  source EventSource
+  deviceId String?
+  interfaceId String?
+  clientId String?
+  severity EventSeverity
+  message String
+  rawMessage String?
+  metadata Json?
+  occurredAt DateTime
+  createdAt DateTime @default(now())
+  device Device? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  interface NetworkInterface? @relation(fields: [interfaceId], references: [id], onDelete: SetNull)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  notifications Notification[]
+}
+model Incident {
+  id String @id @default(cuid())
+  eventType String
+  deviceId String?
+  interfaceId String?
+  clientId String?
+  severity EventSeverity
+  status IncidentStatus @default(ACTIVE)
+  firstDownAt DateTime
+  lastSeenAt DateTime
+  lastNotificationAt DateTime?
+  nextReminderAt DateTime?
+  recoveredAt DateTime?
+  reminderCount Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  device Device? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  interface NetworkInterface? @relation(fields: [interfaceId], references: [id], onDelete: SetNull)
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  updates IncidentUpdate[]
+}
+model IncidentUpdate {
+  id String @id @default(cuid())
+  incidentId String
+  type IncidentUpdateType
+  message String
+  createdAt DateTime @default(now())
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+}
+model SyslogMessage {
+  id String @id @default(cuid())
+  deviceId String?
+  facility String
+  severity String
+  hostname String?
+  interfaceName String?
+  eventType String?
+  rawMessage String
+  parsedMessage String?
+  receivedAt DateTime
+  createdAt DateTime @default(now())
+  device Device? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+}
+model SnmpCheck {
+  id String @id @default(cuid())
+  deviceId String
+  checkType String
+  interfaceId String?
+  status SnmpStatus
+  responseTimeMs Int?
+  errorMessage String?
+  checkedAt DateTime
+  createdAt DateTime @default(now())
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  interface NetworkInterface? @relation(fields: [interfaceId], references: [id], onDelete: SetNull)
+}
+model NotificationRecipient {
+  id String @id @default(cuid())
+  name String
+  phoneNumber String
+  enabled Boolean @default(true)
+  portDownEnabled Boolean @default(true)
+  recoveryEnabled Boolean @default(true)
+  upgradeEnabled Boolean @default(true)
+  downgradeEnabled Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  notifications Notification[]
+}
+model NotificationPolicy {
+  id String @id @default(cuid())
+  eventType String @unique
+  enabled Boolean @default(true)
+  immediateNotification Boolean @default(true)
+  reminderEnabled Boolean @default(true)
+  reminderIntervalMinutes Int @default(10)
+  recoveryNotification Boolean @default(true)
+  maxReminders Int?
+}
+model Notification {
+  id String @id @default(cuid())
+  eventId String
+  recipientId String
+  channel NotificationChannel @default(WHATSAPP)
+  message String
+  status NotificationStatus @default(QUEUED)
+  providerMessageId String?
+  errorMessage String?
+  createdAt DateTime @default(now())
+  sentAt DateTime?
+  deliveredAt DateTime?
+  failedAt DateTime?
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  recipient NotificationRecipient @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+}
+model NocAction {
+  id String @id @default(cuid())
+  userId String
+  clientId String?
+  action NocActionType
+  oldValue String?
+  newValue String?
+  status RecordStatus @default(PENDING)
+  details String?
+  createdAt DateTime @default(now())
+  user User @relation(fields: [userId], references: [id])
+  client Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  packageChanges PackageChange[]
+}
+model PackageChange {
+  id String @id @default(cuid())
+  nocActionId String
+  clientId String
+  userId String
+  action NocActionType
+  oldPackage String
+  newPackage String
+  operatorName String
+  status RecordStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  nocAction NocAction @relation(fields: [nocActionId], references: [id], onDelete: Cascade)
+  client Client @relation(fields: [clientId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+}
+model AuditLog {
+  id String @id @default(cuid())
+  userId String?
+  action String
+  module String
+  ipAddress String?
+  result String
+  details String?
+  createdAt DateTime @default(now())
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+model SystemSetting {
+  id String @id @default(cuid())
+  key String @unique
+  value String
+  description String?
+  updatedAt DateTime @updatedAt
+}
