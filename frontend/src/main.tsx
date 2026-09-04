@@ -6,6 +6,7 @@ import './brand-overrides.css'
 import './login-final-overrides.css'
 import './login-layout.css'
 import './palette-final.css'
+import './palette-absolute.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
