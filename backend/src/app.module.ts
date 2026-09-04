@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common'
+import { APP_GUARD } from '@nestjs/core'
 import { ConfigModule } from '@nestjs/config'
 import { PrismaService } from './prisma.service'
 import { HealthModule } from './health/health.module'
@@ -19,6 +20,7 @@ import { WhatsappModule } from './whatsapp/whatsapp.module'
 import { RecipientsModule } from './recipients/recipients.module'
 import { NocModule } from './noc/noc.module'
 import { AuditModule } from './audit/audit.module'
+import { JwtAuthGuard } from './auth/jwt-auth.guard'
 
-@Module({ imports: [ConfigModule.forRoot({ isGlobal: true }), HealthModule, AuthModule, DevicesModule, InterfacesModule, ClientsModule, AlertsModule, UsersModule, RolesModule, IncidentsModule, EventsModule, SyslogModule, SnmpModule, NotificationsModule, WhatsappModule, RecipientsModule, NocModule, AuditModule, DataModule], providers: [PrismaService], exports: [PrismaService] })
+@Module({ imports: [ConfigModule.forRoot({ isGlobal: true }), HealthModule, AuthModule, DevicesModule, InterfacesModule, ClientsModule, AlertsModule, UsersModule, RolesModule, IncidentsModule, EventsModule, SyslogModule, SnmpModule, NotificationsModule, WhatsappModule, RecipientsModule, NocModule, AuditModule, DataModule], providers: [PrismaService, { provide: APP_GUARD, useClass: JwtAuthGuard }], exports: [PrismaService] })
 export class AppModule {}

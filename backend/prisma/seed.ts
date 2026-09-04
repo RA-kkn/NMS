@@ -3,9 +3,9 @@ import * as bcrypt from 'bcrypt'
 const prisma = new PrismaClient()
 
 async function main() {
-  const role = await prisma.role.upsert({ where: { name: 'Super Admin' }, update: {}, create: { name: 'Super Admin', description: 'Full access to the monitoring application' } })
-  const passwordHash = await bcrypt.hash('DemoPass123!', 12)
-  const user = await prisma.user.upsert({ where: { username: 'admin' }, update: {}, create: { name: 'Administrator', username: 'admin', email: 'admin@example.invalid', passwordHash } })
+  const role = await prisma.role.upsert({ where: { name: 'SUPER_ADMIN' }, update: { description: 'Full access to the monitoring application' }, create: { name: 'SUPER_ADMIN', description: 'Full access to the monitoring application' } })
+  const passwordHash = await bcrypt.hash('admin123', 12)
+  const user = await prisma.user.upsert({ where: { username: 'admin' }, update: { passwordHash, enabled: true }, create: { name: 'Administrator', username: 'admin', email: 'admin@example.invalid', passwordHash } })
   await prisma.userRole.upsert({ where: { userId_roleId: { userId: user.id, roleId: role.id } }, update: {}, create: { userId: user.id, roleId: role.id } })
   const deviceData = [
     ['Core-SW-01', '10.10.10.1', 'Cisco', 'Switch', DeviceStatus.ONLINE], ['Core-SW-02', '10.10.10.2', 'Cisco', 'Switch', DeviceStatus.ONLINE], ['Access-SW-01', '10.10.20.1', 'Huawei', 'Switch', DeviceStatus.ONLINE], ['Access-SW-02', '10.10.20.2', 'Huawei', 'Switch', DeviceStatus.ONLINE], ['Access-SW-03', '10.10.20.3', 'MikroTik', 'Switch', DeviceStatus.OFFLINE], ['Edge-Router-01', '10.10.30.1', 'Cisco', 'Router', DeviceStatus.ONLINE],
@@ -19,6 +19,6 @@ async function main() {
   await prisma.incident.create({ data: { eventType: 'PORT_DOWN', deviceId: created[3].id, interfaceId: iface.id, severity: EventSeverity.CRITICAL, status: IncidentStatus.ACTIVE, firstDownAt: new Date(), lastSeenAt: new Date(), updates: { create: { type: 'CREATED', message: 'Incident created from demo port-down event' } } } })
   await prisma.notificationRecipient.upsert({ where: { id: 'demo-noc-recipient' }, update: {}, create: { id: 'demo-noc-recipient', name: 'NOC On-Call', phoneNumber: '+0000000000' } })
   await prisma.notificationPolicy.upsert({ where: { eventType: 'PORT_DOWN' }, update: {}, create: { eventType: 'PORT_DOWN', enabled: true, immediateNotification: true, reminderEnabled: true, reminderIntervalMinutes: 10, recoveryNotification: true, maxReminders: null } })
-  console.log(`Seeded ${created.length} devices and event ${event.id}. Demo login: admin / DemoPass123!`)
+  console.log(`Seeded ${created.length} devices and event ${event.id}.`)
 }
 main().catch(error => { console.error(error); process.exitCode = 1 }).finally(() => prisma.$disconnect())
