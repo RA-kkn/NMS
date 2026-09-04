@@ -4,6 +4,8 @@ import './index.css'
 import App from './App.tsx'
 import './brand-overrides.css'
 import './login-final-overrides.css'
+import './login-layout.css'
+import './palette-final.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
